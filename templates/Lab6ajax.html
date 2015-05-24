@@ -1,0 +1,189 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+    <meta charset="UTF-8">
+	<script type="text/javascript"  src="https://ajax.googleapis.com/ajax/libs/jquery/1.8.3/jquery.min.js"></script>
+    <title>Сайт</title>
+	<script>
+	$(function() {
+		var mydb = {}
+		mydb.init = {}
+		mydb.init.db = {}
+		
+		// Для удобства помещаем функцию в глобальную переменную
+		mydb.init.open = function(){
+			mydb.init.db = openDatabase("mydb","1.0","Lab4",1024*1024*5);
+			// название БД, версия, описание, размер
+		}
+		
+		// Создаем таблицу
+		mydb.init.createTable = function(){
+			var database = mydb.init.db;
+			database.transaction(function(tx){
+				tx.executeSql("CREATE TABLE IF NOT EXISTS form (ID INTEGER PRIMARY KEY ASC,fio TEXT, age INTEGER, email TEXT, tel TEXT)", []);
+			});
+		}
+
+		// функция добавления записи
+		mydb.init.addTodo = function(fio,age, email, tel){
+			var database = mydb.init.db;
+			database.transaction(function(tx){
+				tx.executeSql("INSERT INTO form (fio,age,email,tel) VALUES (?,?,?,?)", [fio,age,email,tel]);
+				$('#text').text('Добавлено!').fadeIn(2000).fadeOut(2000);
+				showAllTodo(fio,age,email,tel);
+			});
+		}
+
+		// событие добавление новой записи
+		$('#create_form').click(function(){
+			var fio = $('input[name=fio]').val();
+			var age = $('input[name=age]').val();
+			var email = $('input[name=email]').val();
+			var tel = $('input[name=tel]').val();
+			if(fio.length == '' || age.length == '' || email.length == '' || tel.length == '')
+			{
+				alert('Заполните все поля!');
+			}
+			else
+			{
+				mydb.init.addTodo(fio,age, email, tel);
+				$.ajax({
+	                data: $('#myform').serialize(),
+	                type: $('#myform').attr('method'),
+	                url: $('#myform').attr('action'),
+	                success: function(response) {
+
+	                }
+	            });
+				$('input[name=fio]').val('');
+				$('input[name=age]').val(18);
+				$('input[name=email]').val('');
+				$('input[name=tel]').val('');
+			}
+		});
+		
+		// перезагрузка таблицы с данными
+		mydb.init.uptadetable = function(){
+			$('table.list').empty().append("<tr><th>ФИО</th><th>Возраст</th><th>E-mail</th><th>Номер</th><th>Действие</th></tr>");
+			var database = mydb.init.db;
+			database.transaction(function(tx){
+				tx.executeSql("SELECT * FROM form", [], function(tx,result){
+					for (var i=0; i < result.rows.length; i++) {
+						fio = result.rows.item(i).fio;
+						age = result.rows.item(i).age;
+						email = result.rows.item(i).email;
+						tel = result.rows.item(i).tel;
+						id = result.rows.item(i).ID;
+						showAllTodo(fio,age,email,tel, id);
+					}
+				});
+			});
+		}
+		// размещаем созданные записи на странице 
+		function showAllTodo(one,two,three,four,id){
+		$('table.list').append('<tr><td>'+ one +'</td><td>'+ two +'</td><td>'+ three +'</td><td>'+ four +'</td>' + '<td><input id="upd" data='+ id +' value="Редактировать" type="button"><input id="del" data='+ id +' value="Удалить" type="button"><div class="clear"></div></div></td></tr>'); 
+		}
+		
+		function init(){
+			if(typeof(openDatabase) !== 'undefined')
+			{
+				mydb.init.open();
+				mydb.init.createTable();
+				mydb.init.uptadetable();
+			}
+			else
+			{
+				$('body').html('<h2 class="error_message"> Ваш браузер не поддерживает технологию Web SQL </h2>');
+			}
+		}
+		init();
+
+		// функция обновления записи
+		mydb.init.updTo = function(fio, age, email, tel, id){
+			var database = mydb.init.db;
+			database.transaction(function(tx){
+				tx.executeSql("UPDATE form SET fio=?, age=?,email=?,tel=? WHERE id=?", [fio,age,email,tel,id]);
+				$('#myform #upd').remove();
+				$('#text').text('Обновлено!').fadeIn(2000).fadeOut(2000);
+				mydb.init.uptadetable();
+			});
+		}
+
+		$("#myform").on('click','#upd', function(){	
+			var fio = $('input[name=fio]').val();
+			var age = $('input[name=age]').val();
+			var email = $('input[name=email]').val();
+			var tel = $('input[name=tel]').val();
+			var id = $(this).attr('data');
+			if(fio.length == '' || age.length == '' || email.length == '' || tel.length == '')
+			{
+				alert('Заполните все поля!');
+			}
+			else
+			{
+				mydb.init.updTo(fio,age, email, tel, id);
+				$('input[name=fio]').val('');
+				$('input[name=age]').val(18);
+				$('input[name=email]').val('');
+				$('input[name=tel]').val('');
+			}
+		});
+
+	    $('.list').on('click','#upd', function(){
+			id = $(this).attr('data');
+			var database = mydb.init.db;
+			database.transaction(function(tx){
+				tx.executeSql("SELECT * FROM form WHERE id=?", [id], function(tx,result){
+					fio = result.rows.item(0).fio;
+					age = result.rows.item(0).age;
+					email = result.rows.item(0).email;
+					tel = result.rows.item(0).tel;
+					$('input[name=fio]').val(fio);
+					$('input[name=age]').val(age);
+					$('input[name=email]').val(email);
+					$('input[name=tel]').val(tel);
+					$("#myform").append('<input id="upd" data='+ id +' value="Обновить" type="button">');
+				});
+			});
+		});
+		$('.list').on('click','#del', function(){
+			id = $(this).attr('data');
+			var database = mydb.init.db;
+			database.transaction(function(tx){
+				tx.executeSql("DELETE FROM form WHERE id=?", [id]);
+			});
+			mydb.init.uptadetable();
+		});
+	});
+
+	</script>
+	<style>
+	label{
+		width: 130px;
+		display: block;
+		float: left;
+	}
+	#text{
+		font-size:20px;
+		color: #C00;
+	}
+	.list{
+		width: 760px;
+	}
+	</style>
+</head>
+<body>
+<div id='text'></div>
+<form id="myform" action="http://127.0.0.1:8000/postajax" method="GET">
+	<label id="fio">ФИО:</label>
+	<input type="text" name="fio" pattern="^([А-ЯЁ][а-яё]+[\-\s]?){3,}$"  placeholder="Иванов Иван Иванович" required><br />
+	<label id="age">Ваш возраст:</label> <input type="number" name="age" value="18" min="18" max="100" required><br />
+	<label id="email">E-mail:</label>
+	<input type="email" name="email" value="" placeholder="name@email.com" required /><br />
+	<label id="phonenum">Номер телефона:</label>
+	<input type="tel" name="tel" pattern="\([0-9]{3}\)[0-9]{3}-[0-9]{2}-[0-9]{2}"  placeholder="(xxx)xxx-xx-xx" required><br />
+	<input type="submit" id="create_form" value="Отправить" />
+</form>
+<table class="list"></table>
+</body>
+</html>

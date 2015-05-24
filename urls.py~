@@ -1,0 +1,11 @@
+from django.conf.urls.defaults import *
+#from mysite.views import hello
+
+urlpatterns = patterns('',
+	('^$', 'mysite.views.lab4'),
+	('^ajax/$', 'mysite.views.lab4ajax'),
+    ('^qwerty/$', 'mysite.views.hello'),
+	(r'^search-form/$', 'mysite.views.search_form'),
+	(r'^search/$', 'mysite.views.search'),
+)
+
